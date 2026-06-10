@@ -335,4 +335,62 @@ fig.update_layout(
 salvar(fig, "08_potencial_reducao_ev", h=540)
 
 
-print(f"\n8 gráficos gerados em graficos/")
+# ── 09 · Score de prioridade — Onde agir primeiro? ───────────────────────────
+# Score = CO₂ total × distância média (quanto maior, mais urgente a eletrificação)
+# Normalizado de 0 a 100 para leitura direta
+prior = bairro_agg.copy()
+raw   = prior["co2_total_kg"] * prior["dist_media_km"]
+prior["score"] = ((raw - raw.min()) / (raw.max() - raw.min()) * 100).round(1)
+prior = prior.nlargest(10, "score").sort_values("score")
+
+# Gradiente amarelo→laranja→vermelho pelo score
+def cor_score(s):
+    if s >= 80: return "#FF4560"
+    if s >= 60: return C["org"]
+    if s >= 40: return C["y99"]
+    return C["prp"]
+
+cores_score = [cor_score(s) for s in prior["score"]]
+
+fig = go.Figure()
+fig.add_trace(go.Bar(
+    y=prior["bairro_origem"],
+    x=prior["score"],
+    orientation="h",
+    marker_color=cores_score,
+    marker_line_width=0,
+    text=[f"{s:.0f}" for s in prior["score"]],
+    textposition="outside",
+    textfont=dict(color=C["txt"], size=12, family="Inter, Arial, sans-serif"),
+    hovertemplate=(
+        "<b>%{y}</b><br>"
+        "Score: %{x:.0f}/100<br>"
+        "<extra></extra>"
+    ),
+))
+
+# Linha de corte: top 3 = ação imediata
+top3_score = prior["score"].nlargest(3).min()
+fig.add_vline(
+    x=top3_score - 0.5,
+    line_dash="dash", line_color="#FF4560", line_width=1.5,
+    annotation_text="ação imediata",
+    annotation_position="top right",
+    annotation_font=dict(color="#FF4560", size=11),
+)
+
+fig.update_layout(
+    **BASE,
+    title="Onde Agir Primeiro? — Score de Prioridade para Eletrificação",
+    title_font_size=15, title_x=0.02,
+    xaxis=dict(showgrid=True, gridcolor=C["brd"], zeroline=False,
+               range=[0, 115],
+               tickfont=dict(color=C["muted"], size=11),
+               title=dict(text="Score de Prioridade (0–100)", font=dict(color=C["muted"]))),
+    yaxis=dict(showgrid=False, tickfont=dict(color=C["txt"], size=12)),
+    legend=dict(bgcolor="rgba(0,0,0,0)"),
+)
+salvar(fig, "09_score_prioridade", h=520)
+
+
+print(f"\n9 gráficos gerados em graficos/")
