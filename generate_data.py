@@ -20,13 +20,30 @@ import os
 np.random.seed(42)
 
 # ── Constantes ────────────────────────────────────────────────────────────────
-FATOR_EMISSAO_G_KM = 155   # g CO₂/km — ICCT Brasil (dado real)
+FATOR_EMISSAO_G_KM = 155
 N_CORRIDAS         = 10_000
 DATA_INICIO        = pd.Timestamp("2024-01-01")
 DATA_FIM           = pd.Timestamp("2024-03-31")
 
+# ── Distribuição horária realista (pico manhã 7-9h e tarde 17-20h) ────────────
+PESOS_HORA = np.array([
+    0.25, 0.20, 0.18, 0.18, 0.20, 0.50,  # 0-5h  (madrugada)
+    0.85, 2.60, 2.90, 2.10, 1.20, 1.10,  # 6-11h (rush manhã)
+    1.50, 1.40, 1.10, 1.10, 1.25, 2.40,  # 12-17h (almoço + tarde)
+    2.90, 2.70, 1.90, 1.40, 1.00, 0.55,  # 18-23h (rush noite)
+])
+PESOS_HORA = PESOS_HORA / PESOS_HORA.sum()
+
+# Modificador de distância por zona (Zona Sul mais distante do centro)
+DIST_MOD_ZONA = {
+    "Centro": 0.72,
+    "Sul":    1.28,
+    "Oeste":  1.05,
+    "Leste":  0.88,
+    "Norte":  0.82,
+}
+
 # ── Bairros de São Paulo ──────────────────────────────────────────────────────
-# Colunas: id, nome, zona, lat, lon, populacao, area_km2, peso_demanda
 BAIRROS_RAW = [
     (1,  "Pinheiros",      "Oeste",   -23.5636, -46.6770, 68000,  3.1,  1.5),
     (2,  "Itaim Bibi",     "Sul",     -23.5857, -46.6772, 89000,  3.7,  1.8),
@@ -63,7 +80,6 @@ BAIRROS_RAW = [
 COLS_BAIRROS = ["id_bairro", "nome", "zona", "lat", "lon",
                 "populacao", "area_km2", "peso_demanda"]
 
-# Tipos de veículo com distância média por categoria
 TIPOS_VEICULO = {
     "Pop":       {"peso": 0.45, "dist_media": 7.2,  "dist_std": 3.5},
     "Econômico": {"peso": 0.30, "dist_media": 9.5,  "dist_std": 4.8},
@@ -74,36 +90,39 @@ TIPOS_VEICULO = {
 
 def gerar_corridas(df_bairros: pd.DataFrame) -> pd.DataFrame:
     pesos_bairro = df_bairros["peso_demanda"] / df_bairros["peso_demanda"].sum()
-    tipos = list(TIPOS_VEICULO.keys())
-    pesos_tipo = [TIPOS_VEICULO[t]["peso"] for t in tipos]
+    tipos        = list(TIPOS_VEICULO.keys())
+    pesos_tipo   = [TIPOS_VEICULO[t]["peso"] for t in tipos]
 
-    # Timestamps aleatórios no trimestre
-    minutos_totais = int((DATA_FIM - DATA_INICIO).total_seconds() / 60)
-    timestamps = DATA_INICIO + pd.to_timedelta(
-        np.random.randint(0, minutos_totais, N_CORRIDAS), unit="min"
-    )
+    # Timestamps com distribuição realista por hora do dia
+    n_dias = (DATA_FIM - DATA_INICIO).days + 1
+    dias   = np.random.randint(0, n_dias, N_CORRIDAS)
+    horas  = np.random.choice(np.arange(24), size=N_CORRIDAS, p=PESOS_HORA)
+    mins   = np.random.randint(0, 60, N_CORRIDAS)
+    timestamps = (DATA_INICIO
+                  + pd.to_timedelta(dias,  unit="D")
+                  + pd.to_timedelta(horas, unit="h")
+                  + pd.to_timedelta(mins,  unit="min"))
 
     # Bairros de origem
     ids_origem = np.random.choice(
-        df_bairros["id_bairro"].values,
-        size=N_CORRIDAS,
-        p=pesos_bairro.values
+        df_bairros["id_bairro"].values, size=N_CORRIDAS, p=pesos_bairro.values
     )
 
     # Tipos de veículo
     tipos_escolhidos = np.random.choice(tipos, size=N_CORRIDAS, p=pesos_tipo)
 
-    # Distâncias baseadas no tipo de veículo
-    distancias = np.array([
-        max(0.8, np.random.normal(TIPOS_VEICULO[t]["dist_media"], TIPOS_VEICULO[t]["dist_std"]))
-        for t in tipos_escolhidos
-    ])
+    # Mapa bairro → zona para modificador de distância
+    bairro_zona = dict(zip(df_bairros["id_bairro"], df_bairros["zona"]))
+    zona_mods   = np.array([DIST_MOD_ZONA[bairro_zona[i]] for i in ids_origem])
 
-    # Cálculo de CO₂ — fórmula CETESB com fator ICCT
+    # Distâncias por tipo de veículo × modificador de zona
+    distancias = np.array([
+        max(0.5, np.random.normal(TIPOS_VEICULO[t]["dist_media"], TIPOS_VEICULO[t]["dist_std"]))
+        for t in tipos_escolhidos
+    ]) * zona_mods
+
     co2_g  = distancias * FATOR_EMISSAO_G_KM
     co2_kg = co2_g / 1000
-
-    # Duração (tráfego variável: 2–4 min/km)
     duracao = distancias * np.random.uniform(2.0, 4.0, N_CORRIDAS)
 
     corridas = pd.DataFrame({
@@ -117,12 +136,11 @@ def gerar_corridas(df_bairros: pd.DataFrame) -> pd.DataFrame:
         "co2_emitido_kg":   co2_kg.round(4),
     })
 
-    corridas["mes"]       = corridas["data_hora"].dt.month_name()
-    corridas["mes_num"]   = corridas["data_hora"].dt.month
-    corridas["dia_semana"]= corridas["data_hora"].dt.day_name()
-    corridas["hora"]      = corridas["data_hora"].dt.hour
+    corridas["mes"]        = corridas["data_hora"].dt.month_name()
+    corridas["mes_num"]    = corridas["data_hora"].dt.month
+    corridas["dia_semana"] = corridas["data_hora"].dt.day_name()
+    corridas["hora"]       = corridas["data_hora"].dt.hour
 
-    # Junta info do bairro
     corridas = corridas.merge(
         df_bairros[["id_bairro", "nome", "zona", "lat", "lon"]].rename(columns={
             "id_bairro": "id_bairro_origem",
@@ -131,16 +149,13 @@ def gerar_corridas(df_bairros: pd.DataFrame) -> pd.DataFrame:
             "lat":       "lat_origem",
             "lon":       "lon_origem",
         }),
-        on="id_bairro_origem",
-        how="left",
+        on="id_bairro_origem", how="left",
     )
-
     return corridas
 
 
 def salvar_dados(corridas: pd.DataFrame, df_bairros: pd.DataFrame) -> None:
     os.makedirs("data", exist_ok=True)
-
     corridas.to_csv("data/corridas.csv", index=False)
     df_bairros.to_csv("data/bairros.csv", index=False)
 
@@ -181,9 +196,9 @@ def salvar_dados(corridas: pd.DataFrame, df_bairros: pd.DataFrame) -> None:
         CREATE VIEW vw_potencial_reducao AS
         SELECT
             bairro, zona, total_corridas, co2_total_kg,
-            ROUND(co2_total_kg * (1 - 0.30 * (155.0 - 20.0) / 155.0), 2)  AS co2_projetado_kg,
-            ROUND(co2_total_kg * 0.30 * (155.0 - 20.0) / 155.0, 2)         AS reducao_potencial_kg,
-            ROUND(0.30 * (155.0 - 20.0) / 155.0 * 100, 1)                   AS reducao_pct
+            ROUND(co2_total_kg * (1 - 0.30 * (155.0 - 20.0) / 155.0), 2) AS co2_projetado_kg,
+            ROUND(co2_total_kg * 0.30 * (155.0 - 20.0) / 155.0, 2)        AS reducao_potencial_kg,
+            ROUND(0.30 * (155.0 - 20.0) / 155.0 * 100, 1)                  AS reducao_pct
         FROM vw_emissoes_bairro
         ORDER BY reducao_potencial_kg DESC;
     """)

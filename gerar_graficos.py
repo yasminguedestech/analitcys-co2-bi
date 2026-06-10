@@ -6,7 +6,6 @@ Fator de emissão: 155 g CO₂/km (ICCT Brasil) | Fórmula: CETESB
 import os
 import sqlite3
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 
@@ -26,7 +25,7 @@ C = {
     "brd":   "#2A2D3E",
 }
 
-PALETA_ZONA = {
+ZONA_COR = {
     "Centro": C["y99"],
     "Sul":    C["org"],
     "Oeste":  C["prp"],
@@ -34,7 +33,7 @@ PALETA_ZONA = {
     "Norte":  C["grn"],
 }
 
-PALETA_VEICULO = {
+VEI_COR = {
     "Pop":       C["y99"],
     "Econômico": C["org"],
     "Comfort":   C["prp"],
@@ -45,12 +44,17 @@ BASE = dict(
     paper_bgcolor=C["card"],
     plot_bgcolor=C["card"],
     font=dict(color=C["txt"], family="Inter, Arial, sans-serif", size=13),
-    margin=dict(l=24, r=24, t=56, b=24),
+    margin=dict(l=24, r=24, t=60, b=24),
 )
 
-LEG = dict(bgcolor="rgba(0,0,0,0)", font=dict(color=C["txt"], size=12))
-
 W, H = 1200, 500
+
+
+def salvar(fig, nome, w=W, h=H):
+    fig.update_layout(width=w, height=h)
+    fig.write_image(f"graficos/{nome}.png", scale=2)
+    print(f"  graficos/{nome}.png")
+
 
 # ── Dados ──────────────────────────────────────────────────────────────────────
 conn     = sqlite3.connect("data/co2_corridas.db")
@@ -76,41 +80,36 @@ bairro_agg["reducao_kg"]  = bairro_agg["co2_total_kg"] - bairro_agg["co2_proj_kg
 
 zona_agg = (
     corridas.groupby("zona_origem", as_index=False)
-    .agg(co2_total_kg=("co2_emitido_kg","sum"))
+    .agg(co2_total_kg=("co2_emitido_kg", "sum"))
     .sort_values("co2_total_kg", ascending=False)
 )
 
 vei_agg = (
     corridas.groupby("tipo_veiculo", as_index=False)
-    .agg(co2_total_kg=("co2_emitido_kg","sum"))
+    .agg(co2_total_kg=("co2_emitido_kg", "sum"))
 )
 
 tempo_agg = (
     corridas.groupby("semana", as_index=False)
-    .agg(co2_total_kg=("co2_emitido_kg","sum"))
+    .agg(co2_total_kg=("co2_emitido_kg", "sum"))
     .sort_values("semana")
 )
+# Remove última semana se incompleta (< 5 dias de dados)
+tempo_agg = tempo_agg.iloc[:-1] if len(tempo_agg) > 1 else tempo_agg
 
 hora_agg = (
     corridas.groupby("hora", as_index=False)
-    .agg(co2_total_kg=("co2_emitido_kg","sum"), n_corridas=("id_corrida","count"))
+    .agg(co2_total_kg=("co2_emitido_kg", "sum"), n_corridas=("id_corrida", "count"))
     .sort_values("hora")
 )
 
 
-def salvar(fig, nome, w=W, h=H):
-    fig.update_layout(width=w, height=h)
-    caminho = f"graficos/{nome}.png"
-    fig.write_image(caminho, scale=2)
-    print(f"  {caminho}")
-
-
 # ── 01 · Mapa de bolhas ────────────────────────────────────────────────────────
+print("Gerando gráficos...")
 fig = px.scatter_map(
     bairro_agg,
     lat="lat_origem", lon="lon_origem",
-    size="co2_total_kg",
-    color="co2_total_kg",
+    size="co2_total_kg", color="co2_total_kg",
     color_continuous_scale=[
         [0,    "#1A1C2C"],
         [0.3,  C["grn"]],
@@ -130,20 +129,18 @@ fig.update_layout(
     paper_bgcolor=C["bg"],
     plot_bgcolor=C["bg"],
     font=dict(color=C["txt"], family="Inter, Arial, sans-serif", size=13),
-    margin=dict(l=24, r=24, t=56, b=24),
+    margin=dict(l=0, r=0, t=50, b=0),
 )
-salvar(fig, "01_mapa_co2_bairro", w=1200, h=560)
+salvar(fig, "01_mapa_co2_bairro", w=1200, h=580)
 
 
 # ── 02 · Top 10 bairros ────────────────────────────────────────────────────────
 top10 = bairro_agg.nlargest(10, "co2_total_kg").sort_values("co2_total_kg")
-cores = [PALETA_ZONA.get(z, C["muted"]) for z in top10["zona_origem"]]
-
 fig = go.Figure(go.Bar(
     y=top10["bairro_origem"],
     x=top10["co2_total_kg"],
     orientation="h",
-    marker_color=cores,
+    marker_color=[ZONA_COR.get(z, C["muted"]) for z in top10["zona_origem"]],
     marker_line_width=0,
     text=top10["co2_total_kg"].apply(lambda v: f"{v:,.0f} kg"),
     textposition="outside",
@@ -157,6 +154,7 @@ fig.update_layout(
     xaxis=dict(showgrid=True, gridcolor=C["brd"], zeroline=False,
                tickfont=dict(color=C["muted"], size=11)),
     yaxis=dict(showgrid=False, tickfont=dict(color=C["txt"], size=12)),
+    legend=dict(bgcolor="rgba(0,0,0,0)"),
 )
 salvar(fig, "02_top10_bairros")
 
@@ -164,13 +162,14 @@ salvar(fig, "02_top10_bairros")
 # ── 03 · CO₂ por tipo de veículo ──────────────────────────────────────────────
 ordem = ["Pop", "Econômico", "Comfort", "Black"]
 df_v  = vei_agg.set_index("tipo_veiculo").reindex(ordem).reset_index().dropna()
-cores = [PALETA_VEICULO[v] for v in df_v["tipo_veiculo"]]
-
 fig = go.Figure(go.Pie(
     labels=df_v["tipo_veiculo"],
     values=df_v["co2_total_kg"],
     hole=0.58,
-    marker=dict(colors=cores, line=dict(color=C["bg"], width=2)),
+    marker=dict(
+        colors=[VEI_COR[v] for v in df_v["tipo_veiculo"]],
+        line=dict(color=C["bg"], width=2),
+    ),
     textinfo="label+percent",
     textfont=dict(color=C["txt"], size=13),
     sort=False,
@@ -188,12 +187,10 @@ salvar(fig, "03_co2_por_veiculo", w=700, h=480)
 
 
 # ── 04 · CO₂ por zona ─────────────────────────────────────────────────────────
-cores = [PALETA_ZONA.get(z, C["muted"]) for z in zona_agg["zona_origem"]]
-
 fig = go.Figure(go.Bar(
     x=zona_agg["zona_origem"],
     y=zona_agg["co2_total_kg"],
-    marker_color=cores,
+    marker_color=[ZONA_COR.get(z, C["muted"]) for z in zona_agg["zona_origem"]],
     marker_line_width=0,
     text=zona_agg["co2_total_kg"].apply(lambda v: f"{v/1000:.1f} t"),
     textposition="outside",
@@ -208,39 +205,39 @@ fig.update_layout(
     yaxis=dict(showgrid=True, gridcolor=C["brd"], zeroline=False,
                tickfont=dict(color=C["muted"], size=11),
                title=dict(text="CO₂ (kg)", font=dict(color=C["muted"]))),
+    legend=dict(bgcolor="rgba(0,0,0,0)"),
 )
 salvar(fig, "04_co2_por_zona", w=800, h=480)
 
 
 # ── 05 · Evolução semanal ─────────────────────────────────────────────────────
+ymin = tempo_agg["co2_total_kg"].min() * 0.88
 fig = go.Figure()
 fig.add_trace(go.Scatter(
     x=tempo_agg["semana"],
     y=tempo_agg["co2_total_kg"],
     mode="lines+markers",
     line=dict(color=C["y99"], width=2.5),
-    marker=dict(color=C["y99"], size=6, line=dict(color=C["bg"], width=1.5)),
-    fill="tozeroy",
-    fillcolor="rgba(255,214,0,0.08)",
+    marker=dict(color=C["y99"], size=8, line=dict(color=C["bg"], width=1.5)),
     hovertemplate="%{x|%d/%m/%Y}<br>CO₂: %{y:,.0f} kg<extra></extra>",
 ))
 fig.update_layout(
     **BASE,
     title="Evolução Semanal das Emissões de CO₂ — Q1 2024",
     title_font_size=15, title_x=0.02,
+    showlegend=False,
     xaxis=dict(showgrid=True, gridcolor=C["brd"], zeroline=False,
                tickfont=dict(color=C["muted"], size=11), tickformat="%d/%m"),
     yaxis=dict(showgrid=True, gridcolor=C["brd"], zeroline=False,
+               range=[ymin, None],
                tickfont=dict(color=C["muted"], size=11)),
-    showlegend=False,
 )
 salvar(fig, "05_evolucao_semanal")
 
 
-# ── 06 · CO₂ por hora ─────────────────────────────────────────────────────────
+# ── 06 · CO₂ por hora do dia ──────────────────────────────────────────────────
 pico  = {7, 8, 9, 17, 18, 19, 20}
 cores = [C["y99"] if h in pico else C["prp"] for h in hora_agg["hora"]]
-
 fig = go.Figure(go.Bar(
     x=hora_agg["hora"],
     y=hora_agg["co2_total_kg"],
@@ -250,7 +247,7 @@ fig = go.Figure(go.Bar(
     hovertemplate="<b>%{x}h</b><br>CO₂: %{y:,.0f} kg<br>Corridas: %{customdata:,}<extra></extra>",
 ))
 fig.add_annotation(
-    text="🟡 amarelo = horário de pico (7–9h e 17–20h)",
+    text="amarelo = horário de pico (7–9h e 17–20h)",
     xref="paper", yref="paper",
     x=0.98, y=0.97, showarrow=False,
     font=dict(size=11, color=C["muted"]), align="right",
@@ -264,6 +261,7 @@ fig.update_layout(
                title=dict(text="hora", font=dict(color=C["muted"]))),
     yaxis=dict(showgrid=True, gridcolor=C["brd"], zeroline=False,
                tickfont=dict(color=C["muted"], size=11)),
+    legend=dict(bgcolor="rgba(0,0,0,0)"),
 )
 salvar(fig, "06_co2_por_hora")
 
@@ -275,7 +273,7 @@ fig = px.scatter(
     y="co2_total_kg",
     size="n_corridas",
     color="zona_origem",
-    color_discrete_map=PALETA_ZONA,
+    color_discrete_map=ZONA_COR,
     hover_name="bairro_origem",
     labels={
         "dist_media_km": "Distância Média (km)",
@@ -301,7 +299,6 @@ salvar(fig, "07_scatter_distancia_co2")
 
 # ── 08 · Potencial de redução EV ──────────────────────────────────────────────
 top10 = bairro_agg.nlargest(10, "co2_total_kg").sort_values("co2_total_kg")
-
 fig = go.Figure()
 fig.add_trace(go.Bar(
     name="Emissão Atual",
@@ -332,9 +329,10 @@ fig.update_layout(
                tickfont=dict(color=C["muted"], size=11),
                title=dict(text="CO₂ (kg)", font=dict(color=C["muted"]))),
     yaxis=dict(showgrid=False, tickfont=dict(color=C["txt"], size=12)),
-    legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h", y=1.06, x=0, font=dict(color=C["txt"], size=12)),
+    legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h", y=1.06, x=0,
+                font=dict(color=C["txt"], size=12)),
 )
-salvar(fig, "08_potencial_reducao_ev", h=520)
+salvar(fig, "08_potencial_reducao_ev", h=540)
 
 
 print(f"\n8 gráficos gerados em graficos/")
