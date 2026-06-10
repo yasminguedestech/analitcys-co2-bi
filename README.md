@@ -112,7 +112,7 @@ Medidas DAX prontas em `powerbi/medidas_dax.txt` · tema em `powerbi/tema_99.jso
 
 ```
 analitcys-co2-bi/
-├── graficos/               # 9 gráficos exportados em PNG (dark theme · paleta 99)
+├── graficos/               # 9 gráficos exportados em PNG (fundo branco · paleta 99)
 ├── data/
 │   └── bairros.csv         # 30 bairros de SP com coordenadas e peso de demanda
 ├── sql/
