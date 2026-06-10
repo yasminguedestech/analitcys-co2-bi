@@ -1,0 +1,201 @@
+================================================================
+GUIA DE VISUAIS — Power BI · CO₂ 99 São Paulo
+================================================================
+
+PASSO 1 — Importar o tema
+─────────────────────────
+Exibição → Temas → Procurar temas → seleciona tema_99.json
+O fundo escuro e as cores da 99 são aplicados automaticamente.
+
+
+PASSO 2 — Importar os CSVs
+──────────────────────────
+Página inicial → Obter dados → Texto/CSV
+Importa os 8 arquivos de powerbi/export/ de uma vez.
+
+
+PASSO 3 — Criar relação
+────────────────────────
+Modelagem → Gerenciar relações → Novo
+  corridas[bairro_origem]  →  emissoes_por_bairro[bairro]
+  (cardinalidade: Muitos para Um)
+
+
+================================================================
+VISUAIS — montar um por um
+================================================================
+
+── 1. CARTÕES KPI (6 cards no topo) ───────────────────────────
+
+Visual: Cartão
+Fonte: adicionar medidas DAX (ver medidas_dax.txt)
+
+Cartão 1 — Total Corridas
+  Campo: [Total Corridas]
+
+Cartão 2 — CO₂ Total
+  Campo: [CO2 Total (ton)]
+  Formato: 2 casas decimais + sufixo " ton"
+
+Cartão 3 — Média por Corrida
+  Campo: [CO2 Medio por Corrida (kg)]
+  Formato: 3 casas decimais + sufixo " kg"
+
+Cartão 4 — Corridas < 5 km
+  Campo: [Corridas Curtas lt5km]
+
+Cartão 5 — Redução c/ EV
+  Campo: [Pct Reducao EV 30pct]
+  Formato: percentual
+
+Cartão 6 — Bairro Crítico
+  Campo: emissoes_por_bairro[bairro]
+  Filtro: Top 1 por co2_total_kg
+
+
+── 2. MAPA DE BOLHAS — CO₂ por Bairro ─────────────────────────
+
+Visual: Mapa  (ou Mapa de bolhas)
+Fonte: emissoes_por_bairro
+
+  Latitude   → lat
+  Longitude  → lon
+  Tamanho    → co2_total_kg
+  Legenda    → zona
+  Dica tool  → bairro / total_corridas / distancia_media_km
+
+Cor: amarelo #FFD600 (já vem pelo tema)
+
+
+── 3. BARRAS HORIZONTAIS — Top 10 Bairros por CO₂ ─────────────
+
+Visual: Gráfico de barras clusterizado
+Fonte: emissoes_por_bairro
+
+  Eixo Y  → bairro
+  Eixo X  → co2_total_kg
+  Legenda → zona
+  Filtro  → Top 10 por co2_total_kg  (Filtros visuais → Top N)
+
+
+── 4. ROSCA — CO₂ por Tipo de Veículo ─────────────────────────
+
+Visual: Gráfico de rosca
+Fonte: co2_por_veiculo
+
+  Legenda → tipo_veiculo
+  Valores → co2_total_kg
+
+Cores manuais (Formatar → Cores de dados):
+  Pop       → #FFD600
+  Econômico → #FF6B2B
+  Comfort   → #7B61FF
+  Black     → #00D4FF
+
+
+── 5. COLUNAS — CO₂ por Zona ──────────────────────────────────
+
+Visual: Gráfico de colunas clusterizado
+Fonte: emissoes_por_zona
+
+  Eixo X  → zona_origem
+  Eixo Y  → co2_total_kg
+
+Cores manuais (Formatar → Cores de dados):
+  Centro → #FFD600
+  Sul    → #FF6B2B
+  Oeste  → #7B61FF
+  Leste  → #00D4FF
+  Norte  → #00C896
+
+
+── 6. LINHA — Evolução Semanal do CO₂ ─────────────────────────
+
+Visual: Gráfico de linhas
+Fonte: evolucao_semanal
+
+  Eixo X → data_inicio_semana  (formato: dd/MM)
+  Eixo Y → co2_total_kg
+  Cor    → #FFD600 (já vem pelo tema)
+
+Formatar → Área: ativar e colocar transparência 85%
+
+
+── 7. BARRAS EMPILHADAS — Potencial de Redução EV ─────────────
+
+Visual: Gráfico de barras clusterizado (2 séries)
+Fonte: potencial_reducao_ev
+
+  Eixo Y   → bairro
+  Série 1  → co2_total_kg       (nome: "Emissão Atual")
+  Série 2  → co2_projetado_kg   (nome: "Com 30% EV")
+  Filtro   → Top 10 por co2_total_kg
+
+Cores:
+  Emissão Atual  → #FF6B2B
+  Com 30% EV     → #00C896
+
+
+── 8. ÁREA — CO₂ por Hora do Dia ──────────────────────────────
+
+Visual: Gráfico de área
+Fonte: co2_por_hora
+
+  Eixo X → hora
+  Eixo Y → co2_total_kg
+  Cor    → #FFD600
+
+
+── 9. TABELA — Ranking Completo de Bairros ────────────────────
+
+Visual: Tabela
+Fonte: emissoes_por_bairro
+
+  Colunas: bairro / zona / total_corridas / co2_total_kg / co2_total_ton / distancia_media_km
+
+Adicionar coluna calculada (DAX):
+  Ranking = RANKX(ALL(emissoes_por_bairro), emissoes_por_bairro[co2_total_kg],, DESC, DENSE)
+
+Formatação condicional em co2_total_kg:
+  Escala de cores: mínimo #1A1C2C → máximo #FFD600
+
+
+── 10. SLICER — Filtros interativos ───────────────────────────
+
+Visual: Segmentação de dados
+Fonte: corridas
+
+  Slicer 1 → zona_origem    (lista)
+  Slicer 2 → tipo_veiculo   (lista)
+  Slicer 3 → mes            (lista)
+
+
+================================================================
+LAYOUT SUGERIDO (inspirado no modelo de referência)
+================================================================
+
+┌──────────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
+│  Card Total  │ Card CO₂ │ Card Avg │ Card EV  │Card Corr │ Card Bai │  ← linha 1
+├──────────────┴────────┬─┴──────────┴──────────┴──────────┴──────────┤
+│                       │                                              │
+│   Mapa de bolhas      │        Top 10 Bairros (barras horiz.)        │  ← linha 2
+│                       │                                              │
+├───────────┬───────────┼──────────────────────────────────────────────┤
+│  Rosca    │  Colunas  │            Linha — Evolução Semanal          │  ← linha 3
+│ (veículo) │  (zona)   │                                              │
+├───────────┴───────────┴──────────────────────────────────────────────┤
+│         Barras — Potencial EV      │   Área — CO₂ por Hora           │  ← linha 4
+├────────────────────────────────────┴─────────────────────────────────┤
+│                   Tabela ranking de bairros                          │  ← linha 5
+└──────────────────────────────────────────────────────────────────────┘
+
+Slicers: posicionar no topo direito ou em painel lateral (Exibição → Painel de filtros)
+
+================================================================
+FUNDO DAS PÁGINAS
+================================================================
+
+Design → Plano de fundo de página → Cor → #0F1117 (transparência: 0%)
+Isso preenche a tela toda com o escuro da 99.
+
+================================================================

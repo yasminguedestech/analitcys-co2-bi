@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+env/
+
+# Data — arquivos grandes, gerados localmente
+data/corridas.csv
+data/co2_corridas.db
+
+# Power BI exports — gerados via export_powerbi.py
+powerbi/export/corridas.csv
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

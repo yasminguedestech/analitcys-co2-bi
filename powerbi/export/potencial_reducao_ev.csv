@@ -1,0 +1,31 @@
+﻿bairro,zona,total_corridas,co2_total_kg,co2_projetado_kg,reducao_potencial_kg,reducao_pct
+Vila Olímpia,Sul,604,881.5,651.17,230.33,26.1
+Morumbi,Sul,534,778.57,575.14,203.43,26.1
+Brooklin,Sul,482,717.61,530.11,187.5,26.1
+Itaim Bibi,Sul,488,694.75,513.22,181.53,26.1
+Jardins,Oeste,455,645.11,476.55,168.56,26.1
+Pinheiros,Oeste,450,640.7,473.29,167.41,26.1
+Barra Funda,Oeste,403,599.66,442.97,156.69,26.1
+Moema,Sul,419,599.61,442.94,156.67,26.1
+Campo Belo,Sul,387,586.47,433.23,153.24,26.1
+Vila Mariana,Sul,414,578.84,427.59,151.25,26.1
+Consolação,Centro,342,540.98,399.63,141.35,26.1
+Santa Cecília,Centro,339,502.15,370.94,131.21,26.1
+Santo Amaro,Sul,344,496.01,366.41,129.6,26.1
+Bela Vista,Centro,345,479.72,354.37,125.35,26.1
+Tatuapé,Leste,305,455.37,336.39,118.98,26.1
+Lapa,Oeste,298,443.28,327.46,115.82,26.1
+Santana,Norte,292,427.9,316.09,111.81,26.1
+Mooca,Leste,277,411.83,304.22,107.61,26.1
+Liberdade,Centro,280,405.9,299.84,106.06,26.1
+Sé,Centro,271,403.72,298.23,105.49,26.1
+Casa Verde,Norte,241,370.72,273.85,96.87,26.1
+Ipiranga,Sul,257,370.36,273.59,96.77,26.1
+Perdizes,Oeste,274,364.88,269.54,95.34,26.1
+Penha,Leste,230,340.84,251.78,89.06,26.1
+Vila Prudente,Leste,222,331.11,244.59,86.52,26.1
+Água Rasa,Leste,217,319.36,235.91,83.45,26.1
+Sacomã,Sul,206,318.66,235.4,83.26,26.1
+Pirituba,Norte,213,313.45,231.55,81.9,26.1
+Jabaquara,Sul,213,311.31,229.97,81.34,26.1
+Tucuruvi,Norte,198,279.48,206.45,73.03,26.1

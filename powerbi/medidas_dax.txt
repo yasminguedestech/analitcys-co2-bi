@@ -1,0 +1,91 @@
+================================================================
+MEDIDAS DAX — CO₂ Analytics · 99 São Paulo
+Cole cada bloco no Power BI: guia Modelagem → Nova medida
+================================================================
+
+-- ── KPIs principais ─────────────────────────────────────────────
+
+Total Corridas =
+COUNTROWS(corridas)
+
+CO2 Total (ton) =
+DIVIDE(SUM(corridas[co2_emitido_kg]), 1000)
+
+CO2 Medio por Corrida (kg) =
+AVERAGE(corridas[co2_emitido_kg])
+
+Distancia Media (km) =
+AVERAGE(corridas[distancia_km])
+
+
+-- ── Análise de corridas curtas ──────────────────────────────────
+
+Corridas Curtas lt5km =
+CALCULATE(
+    COUNTROWS(corridas),
+    corridas[distancia_km] < 5
+)
+
+Pct Corridas Curtas =
+DIVIDE(
+    [Corridas Curtas lt5km],
+    [Total Corridas],
+    0
+)
+
+
+-- ── Potencial de redução com EV ─────────────────────────────────
+-- Premissas: 30% da frota EV, fator EV Brasil = 20 g/km (ICCT)
+--            Redução por corrida EV = (155 - 20) / 155 = 87%
+
+CO2 Projetado EV 30pct (ton) =
+[CO2 Total (ton)] * (1 - 0.30 * (155 - 20) / 155)
+
+Reducao Potencial EV (ton) =
+[CO2 Total (ton)] - [CO2 Projetado EV 30pct (ton)]
+
+Pct Reducao EV 30pct =
+0.30 * (155 - 20) / 155   -- ~26,1%
+
+
+-- ── Ranking dinâmico de bairros ─────────────────────────────────
+
+Ranking Bairro por CO2 =
+RANKX(
+    ALL(corridas[bairro_origem]),
+    [CO2 Total (ton)],
+    ,
+    DESC,
+    DENSE
+)
+
+
+-- ── Mês com mais emissão ────────────────────────────────────────
+
+Mes Pico CO2 =
+CALCULATE(
+    VALUES(corridas[mes]),
+    TOPN(1,
+        SUMMARIZE(corridas, corridas[mes], "co2", SUM(corridas[co2_emitido_kg])),
+        [co2], DESC
+    )
+)
+
+
+================================================================
+RELAÇÕES SUGERIDAS (guia Modelagem → Gerenciar relações)
+================================================================
+
+corridas[id_bairro_origem]  →  bairros[id_bairro]   (muitos para um)
+
+================================================================
+CORES PERSONALIZADAS (tema 99) — Exibição → Tema → Personalizar
+================================================================
+
+Amarelo 99 (primária):   #FFD600
+Laranja:                 #FF6B2B
+Verde:                   #00C896
+Roxo:                    #7B61FF
+Ciano:                   #00D4FF
+Fundo escuro:            #0F1117
+Fundo card:              #1A1C2C
