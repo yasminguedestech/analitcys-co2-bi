@@ -1,49 +1,77 @@
-# 99 · CO₂ Analytics — Emissões por Bairro em São Paulo
+# 🚗 Emissões de CO₂ por Bairro — São Paulo · 99
+
+![Python](https://img.shields.io/badge/Python-3.10+-6366f1?style=flat&logo=python&logoColor=white)
+![Dash](https://img.shields.io/badge/Dash-Plotly-a78bfa?style=flat&logo=plotly&logoColor=white)
+![SQL](https://img.shields.io/badge/SQL-SQLite-38bdf8?style=flat&logo=sqlite&logoColor=white)
+![Power BI](https://img.shields.io/badge/Power%20BI-Pronto-F2C811?style=flat&logo=powerbi&logoColor=black)
+![Status](https://img.shields.io/badge/Status-Concluído-38bdf8?style=flat)
 
 Dashboard interativo de análise de emissões de CO₂ por corridas de transporte por aplicativo em São Paulo, com foco em identificar **onde é possível reduzir**.
 
 ---
 
-## Sobre o projeto
+## Sobre o Projeto
 
-| | |
-|---|---|
-| **Fator de emissão** | 155 g CO₂/km — ICCT Brasil (2023) · dado real |
-| **Fórmula** | CO₂ (g) = distância (km) × 155 · CETESB |
-| **EV estimado** | 20 g CO₂/km (matriz elétrica brasileira ~80 % renovável) |
-| **Corridas** | Simuladas com distribuição realista por bairro, horário e tipo de veículo* |
-| **Período** | Q1 2024 · Janeiro a Março |
-| **Volume** | 10.000 corridas · 30 bairros de SP |
+O transporte por aplicativo é uma das principais fontes de emissão de CO₂ nas grandes cidades brasileiras. Este projeto mapeia as emissões por bairro em São Paulo, identifica os pontos críticos e estima o impacto de uma transição parcial para veículos elétricos.
+
+**Fator de emissão:** 155 g CO₂/km — ICCT Brasil (2023) · dado real  
+**Fórmula:** CO₂ (g) = distância (km) × 155 · metodologia CETESB  
+**Corridas:** Simuladas com distribuição realista por bairro, horário e tipo de veículo*  
+**Stack:** Python · Dash · Plotly · SQLite · pandas · Power BI
 
 > *A 99 não disponibiliza dados de corridas publicamente. Este projeto aplica fatores de emissão reais a corridas simuladas para fins de demonstração.*
 
 ---
 
-## Dashboard
+## Dashboard — 8 Visualizações
 
-```
+| # | Gráfico | O que responde |
+|---|---------|----------------|
+| 1 | Mapa de bolhas | Onde a emissão está concentrada geograficamente? |
+| 2 | Top 10 bairros | Quais bairros acumulam mais CO₂? |
+| 3 | CO₂ por veículo | Qual categoria emite mais? |
+| 4 | CO₂ por zona | Qual região da cidade é mais crítica? |
+| 5 | Evolução semanal | Como as emissões variaram no Q1 2024? |
+| 6 | CO₂ por hora | Em quais horários a emissão é maior? |
+| 7 | Distância × CO₂ | Bairros com viagens longas emitem proporcionalmente mais? |
+| 8 | Potencial de redução | Onde focar para reduzir com 30 % da frota elétrica? |
+
+---
+
+## Principais Resultados
+
+- **14,6 ton** de CO₂ emitidas em 10.000 corridas simuladas no Q1 2024
+- **Vila Olímpia** e **Morumbi** lideram emissões pela distância média maior das corridas
+- A **Zona Sul** concentra o maior volume de emissões absolutas
+- Horários de pico (7–9h e 17–20h) respondem por ~40 % das emissões do dia
+- Converter **30 % da frota para elétrico** reduziria ~**26 % das emissões** totais
+- Corridas com **menos de 5 km** representam alto potencial de substituição modal
+
+---
+
+## Como Executar
+
+```bash
+# Instalar dependências
+pip install -r requirements.txt
+
+# Gerar os dados simulados + banco SQLite
+python generate_data.py
+
+# Subir o dashboard
 python dashboard/app.py
 ```
 
-Acesse em `http://localhost:8050`
+Acesse: **http://localhost:8050**
 
-### Filtros interativos
-- **Zona** (Centro, Sul, Norte, Leste, Oeste)
-- **Tipo de veículo** (Pop, Econômico, Comfort, Black)
-- Todos os KPIs e gráficos atualizam em tempo real
+### Power BI
 
-### Visões disponíveis
+```bash
+python export_powerbi.py
+```
 
-| Gráfico | Insight |
-|---------|---------|
-| Mapa de bolhas | Concentração geográfica das emissões |
-| Top 10 bairros | Ranking por CO₂ total acumulado |
-| Donut por veículo | Participação de cada categoria |
-| Barras por zona | Sul lidera por distâncias maiores |
-| Evolução semanal | Tendência ao longo do Q1 |
-| CO₂ por hora | Picos de emissão às 7–9h e 17–20h |
-| Distância × CO₂ | Identifica bairros com viagens longas |
-| Potencial de redução | Impacto de 30 % da frota elétrica por bairro |
+Importar cada CSV de `powerbi/export/` via **Obter dados › Texto/CSV**.  
+Medidas DAX prontas em `powerbi/medidas_dax.txt` · tema em `powerbi/tema_99.json`.
 
 ---
 
@@ -52,62 +80,38 @@ Acesse em `http://localhost:8050`
 ```
 analitcys-co2-bi/
 ├── dashboard/
-│   ├── app.py              # Dashboard Dash/Plotly — filtros + callbacks
-│   └── assets/style.css    # Dark theme · paleta 99
+│   ├── app.py              # Dashboard Dash + filtros interativos por zona e veículo
+│   └── assets/style.css    # Dark theme · paleta de cores da 99
 ├── data/
-│   └── bairros.csv         # 30 bairros de SP com coordenadas e pesos
+│   └── bairros.csv         # 30 bairros de SP com coordenadas e peso de demanda
 ├── sql/
-│   ├── schema.sql          # Tabelas + views analíticas
-│   └── queries.sql         # Queries comentadas: ranking, EV, hora de pico
+│   ├── schema.sql          # Tabelas + views analíticas (emissões, zona, potencial EV)
+│   └── queries.sql         # Queries comentadas: ranking, hora de pico, potencial EV
 ├── powerbi/
 │   ├── medidas_dax.txt     # Medidas DAX prontas para colar no Power BI
 │   ├── tema_99.json        # Tema com paleta de cores da 99
 │   └── export/             # CSVs prontos para importar no Power BI
-├── generate_data.py        # Gerador de dados simulados + SQLite
+├── generate_data.py        # Gerador de dados simulados + banco SQLite
 ├── export_powerbi.py       # Exporta CSVs para o Power BI
 └── requirements.txt
 ```
 
 ---
 
-## Como rodar
+## 🛠️ Ferramentas Utilizadas
 
-```bash
-# 1. Instalar dependências
-pip install -r requirements.txt
-
-# 2. Gerar os dados simulados
-python generate_data.py
-
-# 3. Rodar o dashboard
-python dashboard/app.py
-```
-
-### Power BI
-```bash
-python export_powerbi.py
-```
-Importar cada CSV de `powerbi/export/` via **Obter dados › Texto/CSV**.
-As medidas DAX estão em `powerbi/medidas_dax.txt` e o tema em `powerbi/tema_99.json`.
+| Categoria | Ferramenta | Uso |
+|-----------|------------|-----|
+| Linguagem | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | Desenvolvimento completo |
+| Dashboard | ![Dash](https://img.shields.io/badge/Dash-008DE4?style=flat&logo=plotly&logoColor=white) | Interface interativa web |
+| Visualização | ![Plotly](https://img.shields.io/badge/Plotly-3F4F75?style=flat&logo=plotly&logoColor=white) | Gráficos e mapa interativo |
+| Dados | ![Pandas](https://img.shields.io/badge/Pandas-150458?style=flat&logo=pandas&logoColor=white) | Manipulação e análise |
+| Numérico | ![NumPy](https://img.shields.io/badge/NumPy-013243?style=flat&logo=numpy&logoColor=white) | Simulação e cálculos |
+| Banco de dados | ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white) | Armazenamento + views analíticas |
+| BI | ![Power BI](https://img.shields.io/badge/Power%20BI-F2C811?style=flat&logo=powerbi&logoColor=black) | Relatórios e medidas DAX |
+| Versionamento | ![Git](https://img.shields.io/badge/Git-F05032?style=flat&logo=git&logoColor=white) | Controle de versão |
+| Repositório | ![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white) | Hospedagem do projeto |
 
 ---
 
-## Stack
-
-`Python` · `Pandas` · `SQLite` · `Plotly` · `Dash` · `Power BI`
-
----
-
-## Metodologia
-
-A emissão de CO₂ por corrida é calculada pela fórmula da CETESB:
-
-```
-CO₂ (g) = distância_km × 155
-```
-
-O potencial de redução com eletrificação parcial da frota considera:
-- 30 % das corridas migradas para veículos elétricos
-- Fator EV: 20 g CO₂/km (INEE · matriz elétrica brasileira)
-- Redução por corrida EV: (155 − 20) / 155 ≈ **87 %**
-- Redução total estimada: **~26 %** das emissões do período
+*Projeto desenvolvido para portfólio de análise de dados — cenário de mobilidade urbana com fator de emissão real (ICCT Brasil, 2023).*
