@@ -1,7 +1,7 @@
 # 🚗 Emissões de CO₂ por Bairro — São Paulo · 99
 
 ![Python](https://img.shields.io/badge/Python-3.10+-6366f1?style=flat&logo=python&logoColor=white)
-![Dash](https://img.shields.io/badge/Dash-Plotly-a78bfa?style=flat&logo=plotly&logoColor=white)
+![Plotly](https://img.shields.io/badge/Plotly-Gráficos-a78bfa?style=flat&logo=plotly&logoColor=white)
 ![SQL](https://img.shields.io/badge/SQL-SQLite-38bdf8?style=flat&logo=sqlite&logoColor=white)
 ![Power BI](https://img.shields.io/badge/Power%20BI-Pronto-F2C811?style=flat&logo=powerbi&logoColor=black)
 ![Status](https://img.shields.io/badge/Status-Concluído-38bdf8?style=flat)
@@ -17,13 +17,23 @@ O transporte por aplicativo é uma das principais fontes de emissão de CO₂ na
 **Fator de emissão:** 155 g CO₂/km — ICCT Brasil (2023) · dado real  
 **Fórmula:** CO₂ (g) = distância (km) × 155 · metodologia CETESB  
 **Corridas:** Simuladas com distribuição realista por bairro, horário e tipo de veículo*  
-**Stack:** Python · Dash · Plotly · SQLite · pandas · Power BI
+**Stack:** Python · Plotly · SQLite · pandas · Power BI
 
 > *A 99 não disponibiliza dados de corridas publicamente. Este projeto aplica fatores de emissão reais a corridas simuladas para fins de demonstração.*
 
 ---
 
-## Dashboard — 8 Visualizações
+## Screenshots
+
+![Mapa CO₂](graficos/01_mapa_co2_bairro.png)
+![Top 10 Bairros](graficos/02_top10_bairros.png)
+![Evolução Semanal](graficos/05_evolucao_semanal.png)
+![CO₂ por Hora](graficos/06_co2_por_hora.png)
+![Potencial de Redução](graficos/08_potencial_reducao_ev.png)
+
+---
+
+## Visualizações — 8 Gráficos
 
 | # | Gráfico | O que responde |
 |---|---------|----------------|
@@ -58,11 +68,11 @@ pip install -r requirements.txt
 # Gerar os dados simulados + banco SQLite
 python generate_data.py
 
-# Subir o dashboard
-python dashboard/app.py
+# Gerar todos os gráficos em PNG
+python gerar_graficos.py
 ```
 
-Acesse: **http://localhost:8050**
+Os gráficos são salvos em `graficos/`.
 
 ### Power BI
 
@@ -79,9 +89,7 @@ Medidas DAX prontas em `powerbi/medidas_dax.txt` · tema em `powerbi/tema_99.jso
 
 ```
 analitcys-co2-bi/
-├── dashboard/
-│   ├── app.py              # Dashboard Dash + filtros interativos por zona e veículo
-│   └── assets/style.css    # Dark theme · paleta de cores da 99
+├── graficos/               # 8 gráficos exportados em PNG (2400×1000 px)
 ├── data/
 │   └── bairros.csv         # 30 bairros de SP com coordenadas e peso de demanda
 ├── sql/
@@ -103,8 +111,7 @@ analitcys-co2-bi/
 | Categoria | Ferramenta | Uso |
 |-----------|------------|-----|
 | Linguagem | ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white) | Desenvolvimento completo |
-| Dashboard | ![Dash](https://img.shields.io/badge/Dash-008DE4?style=flat&logo=plotly&logoColor=white) | Interface interativa web |
-| Visualização | ![Plotly](https://img.shields.io/badge/Plotly-3F4F75?style=flat&logo=plotly&logoColor=white) | Gráficos e mapa interativo |
+| Visualização | ![Plotly](https://img.shields.io/badge/Plotly-3F4F75?style=flat&logo=plotly&logoColor=white) | Gráficos e mapa · export PNG |
 | Dados | ![Pandas](https://img.shields.io/badge/Pandas-150458?style=flat&logo=pandas&logoColor=white) | Manipulação e análise |
 | Numérico | ![NumPy](https://img.shields.io/badge/NumPy-013243?style=flat&logo=numpy&logoColor=white) | Simulação e cálculos |
 | Banco de dados | ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white) | Armazenamento + views analíticas |
