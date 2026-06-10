@@ -11,35 +11,33 @@ import plotly.express as px
 
 os.makedirs("graficos", exist_ok=True)
 
-# ── Paleta 99 — tema claro ─────────────────────────────────────────────────────
+# ── Paleta 99 — amarelo + tons escuros sobre fundo branco ─────────────────────
 C = {
     "bg":    "#FFFFFF",
-    "y99":   "#FFD600",   # amarelo 99
+    "y99":   "#FFD600",   # amarelo 99 (primário)
     "blk":   "#111827",   # preto 99
-    "org":   "#EA580C",   # laranja
-    "grn":   "#059669",   # verde
-    "blu":   "#2563EB",   # azul
-    "prp":   "#7C3AED",   # roxo
-    "amb":   "#D97706",   # âmbar (Centro)
-    "red":   "#DC2626",   # vermelho urgência
+    "navy":  "#1E3A5F",   # azul marinho escuro
+    "char":  "#374151",   # carvão
+    "amb":   "#92400E",   # âmbar escuro (quente)
+    "teal":  "#164E63",   # azul-verde escuro
     "txt":   "#111827",
     "muted": "#6B7280",
     "brd":   "#E5E7EB",
 }
 
 ZONA_COR = {
-    "Sul":    C["org"],
-    "Oeste":  C["prp"],
-    "Leste":  C["blu"],
-    "Norte":  C["grn"],
-    "Centro": C["amb"],
+    "Sul":    C["navy"],
+    "Oeste":  C["char"],
+    "Leste":  C["amb"],
+    "Norte":  C["teal"],
+    "Centro": C["y99"],
 }
 
 VEI_COR = {
     "Pop":       C["y99"],
-    "Econômico": C["org"],
-    "Comfort":   C["prp"],
-    "Black":     C["blk"],
+    "Econômico": C["blk"],
+    "Comfort":   C["navy"],
+    "Black":     C["char"],
 }
 
 BASE = dict(
@@ -53,7 +51,7 @@ W, H = 1200, 500
 
 
 def add_logo(fig, x=0.995, y=1.06):
-    """Adiciona badge 99 no canto superior direito."""
+    """Badge amarelo 99 no canto superior direito."""
     fig.add_annotation(
         text="<b>99</b>",
         xref="paper", yref="paper",
@@ -113,7 +111,7 @@ tempo_agg = (
     corridas.groupby("semana", as_index=False)
     .agg(co2_total_kg=("co2_emitido_kg", "sum"))
     .sort_values("semana")
-    .iloc[:-1]  # remove última semana incompleta
+    .iloc[:-1]
 )
 
 hora_agg = (
@@ -130,10 +128,10 @@ fig = px.scatter_map(
     lat="lat_origem", lon="lon_origem",
     size="co2_total_kg", color="co2_total_kg",
     color_continuous_scale=[
-        [0,   "#F3F4F6"],
-        [0.3, C["grn"]],
-        [0.65,C["org"]],
-        [1,   C["red"]],
+        [0,    "#F3F4F6"],
+        [0.4,  C["y99"]],
+        [0.75, C["navy"]],
+        [1,    C["blk"]],
     ],
     hover_name="bairro_origem",
     size_max=48,
@@ -159,7 +157,7 @@ fig = go.Figure(go.Bar(
     y=top10["bairro_origem"],
     x=top10["co2_total_kg"],
     orientation="h",
-    marker_color=[ZONA_COR.get(z, C["muted"]) for z in top10["zona_origem"]],
+    marker_color=[ZONA_COR.get(z, C["char"]) for z in top10["zona_origem"]],
     marker_line_width=0,
     text=top10["co2_total_kg"].apply(lambda v: f"{v:,.0f} kg"),
     textposition="outside",
@@ -213,7 +211,7 @@ salvar(fig, "03_co2_por_veiculo", w=700, h=480)
 fig = go.Figure(go.Bar(
     x=zona_agg["zona_origem"],
     y=zona_agg["co2_total_kg"],
-    marker_color=[ZONA_COR.get(z, C["muted"]) for z in zona_agg["zona_origem"]],
+    marker_color=[ZONA_COR.get(z, C["char"]) for z in zona_agg["zona_origem"]],
     marker_line_width=0,
     text=zona_agg["co2_total_kg"].apply(lambda v: f"{v/1000:.1f} t"),
     textposition="outside",
@@ -262,8 +260,8 @@ salvar(fig, "05_evolucao_semanal")
 
 
 # ── 06 · CO₂ por hora do dia ──────────────────────────────────────────────────
-pico  = {7, 8, 9, 17, 18, 19, 20}
-cores = [C["y99"] if h in pico else C["brd"] for h in hora_agg["hora"]]
+pico   = {7, 8, 9, 17, 18, 19, 20}
+cores  = [C["y99"] if h in pico else C["brd"] for h in hora_agg["hora"]]
 bordas = [C["blk"] if h in pico else C["muted"] for h in hora_agg["hora"]]
 
 fig = go.Figure(go.Bar(
@@ -276,7 +274,7 @@ fig = go.Figure(go.Bar(
     hovertemplate="<b>%{x}h</b><br>CO₂: %{y:,.0f} kg<br>Corridas: %{customdata:,}<extra></extra>",
 ))
 fig.add_annotation(
-    text="🟡 amarelo = horário de pico (7–9h e 17–20h)",
+    text="amarelo = horário de pico (7–9h e 17–20h)",
     xref="paper", yref="paper",
     x=0.02, y=0.97, showarrow=False,
     font=dict(size=11, color=C["muted"]), align="left",
@@ -335,9 +333,9 @@ fig.add_trace(go.Bar(
     y=top10["bairro_origem"],
     x=top10["co2_total_kg"],
     orientation="h",
-    marker_color=C["org"],
+    marker_color=C["blk"],
     marker_line_width=0,
-    opacity=0.9,
+    opacity=0.85,
     hovertemplate="<b>%{y}</b><br>Atual: %{x:,.0f} kg<extra></extra>",
 ))
 fig.add_trace(go.Bar(
@@ -345,9 +343,9 @@ fig.add_trace(go.Bar(
     y=top10["bairro_origem"],
     x=top10["co2_proj_kg"],
     orientation="h",
-    marker_color=C["grn"],
+    marker_color=C["y99"],
     marker_line_width=0,
-    opacity=0.9,
+    opacity=0.95,
     hovertemplate="<b>%{y}</b><br>Projetado: %{x:,.0f} kg<extra></extra>",
 ))
 fig.update_layout(
@@ -373,17 +371,18 @@ prior["score"] = ((raw - raw.min()) / (raw.max() - raw.min()) * 100).round(1)
 prior = prior.nlargest(10, "score").sort_values("score")
 
 def cor_score(s):
-    if s >= 80: return C["red"]
-    if s >= 60: return C["org"]
-    if s >= 40: return C["y99"]
-    return C["blu"]
+    if s >= 80: return C["blk"]
+    if s >= 60: return C["navy"]
+    if s >= 40: return C["char"]
+    return C["muted"]
 
 fig = go.Figure(go.Bar(
     y=prior["bairro_origem"],
     x=prior["score"],
     orientation="h",
     marker_color=[cor_score(s) for s in prior["score"]],
-    marker_line_width=0,
+    marker_line_color=[C["y99"] if s >= 80 else "rgba(0,0,0,0)" for s in prior["score"]],
+    marker_line_width=2,
     text=[f"{s:.0f}" for s in prior["score"]],
     textposition="outside",
     textfont=dict(color=C["txt"], size=12),
@@ -393,10 +392,11 @@ fig = go.Figure(go.Bar(
 top3_score = prior["score"].nlargest(3).min()
 fig.add_vline(
     x=top3_score - 0.5,
-    line_dash="dash", line_color=C["red"], line_width=1.5,
+    line_dash="dash", line_color=C["y99"], line_width=2,
     annotation_text="ação imediata",
     annotation_position="top right",
-    annotation_font=dict(color=C["red"], size=11),
+    annotation_font=dict(color=C["blk"], size=11,
+                         family="Inter, Arial, sans-serif"),
 )
 
 fig.update_layout(
